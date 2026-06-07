@@ -474,31 +474,43 @@ class ImageViewer {
             });
         });
         
-		const previewCheckerToggle = document.getElementById('previewCheckerBg');
-		if (previewCheckerToggle) {
-			previewCheckerToggle.addEventListener('change', (e) => {
-				this.ui.settings.previewCheckerBg = e.target.checked;
-				this.ui.saveSettings();
-				const previewImages = document.querySelectorAll('.card-img');
-				previewImages.forEach(img => {
-					if (e.target.checked) img.classList.add('checker-bg');
-					else img.classList.remove('checker-bg');
-				});
-			});
-			previewCheckerToggle.checked = this.ui.settings.previewCheckerBg;
-		}
-
-		const pixelArtToggle = document.getElementById('pixelArtMode');
-		if (pixelArtToggle) {
-			pixelArtToggle.addEventListener('change', (e) => {
-				this.ui.applyPixelArtSettings(e.target.checked);
-				if (this.fabricCanvas && this.fabricCanvas.contextContainer) {
-					this.disableSmoothing(this.fabricCanvas.contextContainer);
-					this.forceRender();
-				}
-			});
-			pixelArtToggle.checked = this.ui.settings.preservePixelArt;
-		}
+		// Шахматный фон для превью
+        const previewCheckerToggle = document.getElementById('previewCheckerBg');
+        if (previewCheckerToggle) {
+            previewCheckerToggle.checked = this.ui.settings.previewCheckerBg;
+            previewCheckerToggle.addEventListener('change', (e) => {
+                this.ui.settings.previewCheckerBg = e.target.checked;
+                this.ui.saveSettings();
+                // ВОТ ЭТА СТРОКА — ОБНОВЛЯЕТ ВСЕ ПРЕВЬЮ
+                if (typeof window.applyCheckerBackgroundToPreviews === 'function') {
+                    window.applyCheckerBackgroundToPreviews();
+                }
+            });
+        }
+        
+        // Режим пиксельной графики
+        const pixelArtToggle = document.getElementById('pixelArtMode');
+        if (pixelArtToggle) {
+            pixelArtToggle.checked = this.ui.settings.preservePixelArt;
+            pixelArtToggle.addEventListener('change', (e) => {
+                this.ui.settings.preservePixelArt = e.target.checked;
+                this.ui.saveSettings();
+                // Применяем к canvas
+                const canvasEl = document.getElementById(this.canvasId);
+                if (canvasEl) {
+                    if (e.target.checked) {
+                        canvasEl.style.imageRendering = 'pixelated';
+                        canvasEl.style.imageRendering = 'crisp-edges';
+                    } else {
+                        canvasEl.style.imageRendering = 'auto';
+                    }
+                }
+                if (this.fabricCanvas && this.fabricCanvas.contextContainer) {
+                    this.fabricCanvas.contextContainer.imageSmoothingEnabled = !e.target.checked;
+                    this.forceRender();
+                }
+            });
+        }
         
         document.querySelectorAll('[data-brightness]').forEach(btn => {
             btn.addEventListener('click', () => this.applyBrightness(parseInt(btn.getAttribute('data-brightness')) / 100));
