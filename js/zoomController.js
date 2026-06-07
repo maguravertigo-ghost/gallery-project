@@ -101,23 +101,13 @@ class ZoomController {
         let imgWidth, imgHeight;
         
         try {
-            // Получаем реальные размеры изображения
             if (this.currentImage.getBoundingRect) {
-                // Для групп (SVG)
                 const bounds = this.currentImage.getBoundingRect();
                 imgWidth = bounds.width;
                 imgHeight = bounds.height;
             } else {
                 imgWidth = this.currentImage.width;
                 imgHeight = this.currentImage.height;
-            }
-            
-            // Если размеры нулевые - пробуем альтернативный способ
-            if (imgWidth === 0 || imgHeight === 0) {
-                if (this.currentImage.originalWidth) {
-                    imgWidth = this.currentImage.originalWidth;
-                    imgHeight = this.currentImage.originalHeight;
-                }
             }
         } catch(e) {
             console.error('Ошибка получения размеров:', e);
@@ -133,17 +123,14 @@ class ZoomController {
         
         const scale = Math.min(canvasWidth / imgWidth, canvasHeight / imgHeight);
         
-        // Принудительное применение масштаба
         this.currentImage.scale(scale);
-        
-        // Сбрасываем трансформации canvas
         this.fabricCanvas.setViewportTransform([1, 0, 0, 1, 0, 0]);
         this.fabricCanvas.setZoom(1);
-        
-        // Центрируем
         this.fabricCanvas.centerObject(this.currentImage);
         this.disableSmoothing();
         this.fabricCanvas.renderAll();
+        
+        console.log(`zoomToFit: scale=${scale}`);
     }
 
     zoomToPoint(point, zoom) {

@@ -663,20 +663,22 @@ class ImageViewer {
                     const newHeight = this.imageArea.clientHeight;
                     this.fabricCanvas.setDimensions({ width: newWidth, height: newHeight });
                     
-                    // Восстанавливаем сохранённый масштаб и позицию
+                    // ВОССТАНАВЛИВАЕМ СОХРАНЁННЫЙ МАСШТАБ (НЕ FIT!)
                     if (this.currentImage && this._savedScaleBeforeFullscreen !== undefined) {
                         this.currentImage.scale(this._savedScaleBeforeFullscreen);
                         this.currentImage.set({
                             left: this._savedLeftBeforeFullscreen,
                             top: this._savedTopBeforeFullscreen
                         });
+                        this.viewMode = this._savedViewModeBeforeFullscreen;
+                        this.updateViewModeButton();
                         this.fabricCanvas.setViewportTransform([1, 0, 0, 1, 0, 0]);
                         this.fabricCanvas.setZoom(1);
                         this.fabricCanvas.renderAll();
                         console.log('Восстановлен масштаб:', this._savedScaleBeforeFullscreen);
                     } else {
-                        // Если не сохранили - применяем режим
-                        const savedMode = this._viewModeBeforeFullscreen || '100';
+                        // Если не сохранили - применяем режим по умолчанию
+                        const savedMode = this._savedViewModeBeforeFullscreen || '100';
                         if (savedMode === 'fit') {
                             if (this.zoomCtrl) this.zoomCtrl.zoomToFit();
                         } else {
@@ -702,30 +704,17 @@ class ImageViewer {
 
     handleResize() {
         if (!this.isVisible || !this.fabricCanvas) return;
-
+        
         const newWidth = this.imageArea.clientWidth;
         const newHeight = this.imageArea.clientHeight;
-
+        
         if (newWidth > 0 && newHeight > 0) {
-            const currentScale = this.currentImage ? this.currentImage.scaleX : 1;
             this.fabricCanvas.setDimensions({ width: newWidth, height: newHeight });
-
-            // ВАЖНО! Здесь отключаем вмешательство при ресайзе, чтобы не сбивать fullscreen
-            if (!document.fullscreenElement) {
-                if (this.currentImage) {
-                    this.currentImage.scale(currentScale);
-                    this.fabricCanvas.centerObject(this.currentImage);
-                    this.fabricCanvas.renderAll();
-                }
-                if (this.viewMode === 'fit') {
-                    if (this.zoomCtrl) this.zoomCtrl.zoomToFit();
-                }
-            } else {
-                 // Если fullscreen активен, просто центрируем без изменения масштаба
-                if (this.currentImage) {
-                    this.fabricCanvas.centerObject(this.currentImage);
-                    this.fabricCanvas.renderAll();
-                }
+            
+            // Только центрируем, не меняем масштаб
+            if (this.currentImage) {
+                this.fabricCanvas.centerObject(this.currentImage);
+                this.fabricCanvas.renderAll();
             }
         }
     }
