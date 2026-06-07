@@ -29,15 +29,14 @@ class FilterController {
                 } else {
                     if (this.filterControls) this.filterControls.style.display = 'none';
                 }
-                // Показываем превью фильтра при выборе
-                this.previewFilter();
+                this.applyFilter(); // применяем сразу при выборе
             });
         }
         
         if (this.filterAmount) {
             this.filterAmount.addEventListener('input', (e) => {
                 this.currentAmount = parseInt(e.target.value);
-                this.previewFilter();
+                this.applyFilter();
             });
         }
     }
@@ -54,23 +53,15 @@ class FilterController {
         this.currentImage = image;
     }
 
-    // Создать фильтр по типу и значению
     createFilter(filterType, amount) {
         switch(filterType) {
-            case 'grayscale':
-                return new fabric.Image.filters.Grayscale();
-            case 'sepia':
-                return new fabric.Image.filters.Sepia();
-            case 'invert':
-                return new fabric.Image.filters.Invert();
-            case 'vintage':
-                return new fabric.Image.filters.Vintage();
-            case 'polaroid':
-                return new fabric.Image.filters.Polaroid();
-            case 'kodachrome':
-                return new fabric.Image.filters.Kodachrome();
-            case 'technicolor':
-                return new fabric.Image.filters.Technicolor();
+            case 'grayscale': return new fabric.Image.filters.Grayscale();
+            case 'sepia': return new fabric.Image.filters.Sepia();
+            case 'invert': return new fabric.Image.filters.Invert();
+            case 'vintage': return new fabric.Image.filters.Vintage();
+            case 'polaroid': return new fabric.Image.filters.Polaroid();
+            case 'kodachrome': return new fabric.Image.filters.Kodachrome();
+            case 'technicolor': return new fabric.Image.filters.Technicolor();
             case 'brightness':
                 const brightnessValue = (amount - 50) / 50;
                 return new fabric.Image.filters.Brightness({ brightness: brightnessValue });
@@ -83,17 +74,21 @@ class FilterController {
             case 'blur':
                 const blurValue = amount / 50;
                 return new fabric.Image.filters.Blur({ blur: blurValue });
-            default:
-                return null;
+            default: return null;
         }
     }
 
-    // Превью фильтра (применяет временно)
-    previewFilter() {
+    applyFilter() {
         if (!this.fabricCanvas || !this.currentImage) return;
-        if (this.currentFilterType === 'none') return;
-        
-        const filter = this.createFilter(this.currentFilterType, this.currentAmount);
+        const selected = this.filterSelect?.value;
+        if (!selected || selected === 'none') {
+            this.currentImage.filters = [];
+            this.currentImage.applyFilters();
+            this.disableSmoothing();
+            this.fabricCanvas.renderAll();
+            return;
+        }
+        const filter = this.createFilter(selected, this.currentAmount);
         if (filter) {
             this.currentImage.filters = [filter];
             this.currentImage.applyFilters();
@@ -102,21 +97,8 @@ class FilterController {
         }
     }
 
-    // Применить фильтр (оставляет текущий)
-    applyFilter() { 
-        if (this.filterCtrl) {
-            this.filterCtrl.applyFilter();
-        }
-    }
-    
-    resetFilter() { 
-        if (this.filterCtrl) {
-            this.filterCtrl.resetLastFilter();
-        }
-    }
-
-    // Сброс фильтра
-    resetLastFilter() {
+    // Полный сброс всех фильтров
+    resetFilter() {
         if (!this.fabricCanvas || !this.currentImage) return;
         this.currentImage.filters = [];
         this.currentImage.applyFilters();
@@ -125,39 +107,32 @@ class FilterController {
         if (this.filterSelect) this.filterSelect.value = 'none';
         if (this.filterControls) this.filterControls.style.display = 'none';
         this.currentFilterType = 'none';
+        this.currentAmount = 50;
+        if (this.filterAmount) this.filterAmount.value = 50;
     }
 
-    removeAllFilters() { 
-        if (this.filterCtrl) {
-            this.filterCtrl.removeAllFilters();
-        }
+    // Удалить последний фильтр (если нужно)
+    resetLastFilter() {
+        this.resetFilter(); // для простоты пусть тоже сбрасывает все
     }
 
-    // Для быстрых фильтров (кнопки)
-    applyQuickFilter(filterType) {
-        if (!this.fabricCanvas || !this.currentImage) return;
-        
-        if (this.filterSelect) this.filterSelect.value = filterType;
-        this.currentFilterType = filterType;
-        
-        const filter = this.createFilter(filterType, this.currentAmount);
-        if (filter) {
-            this.currentImage.filters = [filter];
-            this.currentImage.applyFilters();
-            this.disableSmoothing();
-            this.fabricCanvas.renderAll();
-        }
+    removeAllFilters() {
+        this.resetFilter();
     }
 
-    applyBrightness(value) { 
-        if (this.filterCtrl) {
-            this.filterCtrl.applyBrightness(value);
-        }
+    applyBrightness(value) {
+        const filter = new fabric.Image.filters.Brightness({ brightness: value });
+        this.currentImage.filters = [filter];
+        this.currentImage.applyFilters();
+        this.disableSmoothing();
+        this.fabricCanvas.renderAll();
     }
-    
-    applyContrast(value) { 
-        if (this.filterCtrl) {
-            this.filterCtrl.applyContrast(value);
-        }
+
+    applyContrast(value) {
+        const filter = new fabric.Image.filters.Contrast({ contrast: value });
+        this.currentImage.filters = [filter];
+        this.currentImage.applyFilters();
+        this.disableSmoothing();
+        this.fabricCanvas.renderAll();
     }
 }

@@ -56,10 +56,12 @@ class ImageViewer {
         
         if (this.viewMode === 'fit') {
             btn.innerHTML = '<i class="fas fa-compress-alt"></i>';
-            btn.title = 'Режим: По размеру';
+            btn.title = 'Режим: Заполнить (нажмите для 100%)';
+            btn.classList.add('active-mode');
         } else {
             btn.innerHTML = '<i class="fas fa-expand-alt"></i>';
-            btn.title = 'Режим: 100%';
+            btn.title = 'Режим: 100% (нажмите для Заполнить)';
+            btn.classList.remove('active-mode');
         }
     }
 
@@ -100,7 +102,6 @@ class ImageViewer {
         canvasEl.style.width = '100%';
         canvasEl.style.height = '100%';
         
-        // ПРИНУДИТЕЛЬНЫЙ ПИКСЕЛЬНЫЙ РЕНДЕРИНГ ДЛЯ CANVAS
         canvasEl.style.imageRendering = 'pixelated';
         canvasEl.style.imageRendering = 'crisp-edges';
         
@@ -119,7 +120,6 @@ class ImageViewer {
         
         this.fabricCanvas.setDimensions({ width: width, height: height });
         
-        // ЖЁСТКОЕ ОТКЛЮЧЕНИЕ СГЛАЖИВАНИЯ ВО ВСЕХ КОНТЕКСТАХ
         if (this.fabricCanvas.contextContainer) {
             this.fabricCanvas.contextContainer.imageSmoothingEnabled = false;
             this.fabricCanvas.contextContainer.mozImageSmoothingEnabled = false;
@@ -133,7 +133,6 @@ class ImageViewer {
             this.fabricCanvas.contextTop.msImageSmoothingEnabled = false;
         }
         
-        // ПЕРЕОПРЕДЕЛЯЕМ RENDERALL ДЛЯ ПРИНУДИТЕЛЬНОГО ОТКЛЮЧЕНИЯ
         const originalRender = this.fabricCanvas.renderAll.bind(this.fabricCanvas);
         this.fabricCanvas.renderAll = () => {
             if (this.fabricCanvas.contextContainer) {
@@ -142,7 +141,6 @@ class ImageViewer {
             originalRender();
         };
         
-        // Инициализация контроллеров с canvas
         this.zoomCtrl = new ZoomController(this.fabricCanvas, this.currentImage);
         this.transformCtrl = new TransformController(this.fabricCanvas, this.currentImage);
         this.filterCtrl = new FilterController(this.fabricCanvas, this.currentImage);
@@ -228,39 +226,27 @@ class ImageViewer {
                 this.ui.settings
             );
             
-            console.log(`loadImage RESULT: ${imageData.name}, fabricImg: ${fabricImg ? 'есть' : 'НЕТ'}`);
+            if (!fabricImg) throw new Error('Не удалось загрузить изображение');
             
-            if (!fabricImg) {
-                throw new Error('Не удалось загрузить изображение');
-            }
+            if (this.currentImage) this.fabricCanvas.remove(this.currentImage);
             
-            if (this.currentImage) {
-                this.fabricCanvas.remove(this.currentImage);
-            }
-            
-            // ВАЖНО: присваиваем currentImage ПЕРЕД добавлением в canvas
             this.currentImage = fabricImg;
+            this.currentImage.name = imageData.name;
+            this.currentImage.path = imageData.path;
+            this.currentImage.fileObj = imageData.fileObj;
             
             this.clearCanvas();
             this.fabricCanvas.clear();
             this.fabricCanvas.add(this.currentImage);
             
-            // ПРИНУДИТЕЛЬНОЕ ОТКЛЮЧЕНИЕ СГЛАЖИВАНИЯ
             if (this.fabricCanvas.contextContainer) {
                 this.fabricCanvas.contextContainer.imageSmoothingEnabled = false;
                 this.fabricCanvas.contextContainer.mozImageSmoothingEnabled = false;
                 this.fabricCanvas.contextContainer.webkitImageSmoothingEnabled = false;
             }
-            
-            // Для самого изображения тоже отключаем
             if (this.currentImage.set) {
-                this.currentImage.set({
-                    imageSmoothing: false,
-                    imageSmoothingEnabled: false
-                });
+                this.currentImage.set({ imageSmoothing: false, imageSmoothingEnabled: false });
             }
-            
-            console.log(`Изображение добавлено в canvas: ${this.currentImage.width} x ${this.currentImage.height}`);
             
             if (this.zoomCtrl) this.zoomCtrl.setImage(this.currentImage);
             if (this.transformCtrl) this.transformCtrl.setImage(this.currentImage);
@@ -277,8 +263,6 @@ class ImageViewer {
     async open(imageData, index, totalCount) {
         if (this.isLoading) return;
         
-        console.log(`OPEN: ${imageData.name}, URL: ${imageData.url.substring(0, 50)}...`);
-        
         this.currentIndex = index;
         this.totalCount = totalCount;
         this.isVisible = true;
@@ -286,7 +270,6 @@ class ImageViewer {
         document.body.classList.add('modal-open');
         this.modal.classList.add('active');
         
-        // При открытии панель показываем
         this.ui.infoVisible = true;
         if (this.ui.infoPanel) this.ui.infoPanel.classList.remove('hidden');
         
@@ -296,27 +279,15 @@ class ImageViewer {
         if (canvasEl) canvasEl.style.opacity = '0';
         
         await this.initCanvas();
-        
-        console.log('Canvas инициализирован, загружаем изображение...');
-        
         await this.loadImage(imageData);
         await this.ui.updateFileInfo(imageData.fileObj);
         
-        console.log('Изображение загружено, применяем режим...');
-        
-        // Применяем режим просмотра
-        if (this.viewMode === 'fit') {
-            if (this.zoomCtrl) this.zoomCtrl.zoomToFit();
-        } else {
-            if (this.zoomCtrl) this.zoomCtrl.zoomTo100();
-        }
+        this.applyViewMode();  // применяем текущий режим
         
         if (canvasEl) {
             canvasEl.style.transition = 'opacity 0.2s ease';
             canvasEl.style.opacity = '1';
-            setTimeout(() => {
-                if (canvasEl) canvasEl.style.transition = '';
-            }, 200);
+            setTimeout(() => { if (canvasEl) canvasEl.style.transition = ''; }, 200);
         }
     }
 
@@ -324,12 +295,10 @@ class ImageViewer {
         if (!imageData || this.isLoading) return;
         
         this.currentIndex = newIndex;
-        
         if (this.currentImage) {
             this.fabricCanvas.remove(this.currentImage);
             this.currentImage = null;
         }
-        
         this.clearCanvas();
         
         const canvasEl = document.getElementById(this.canvasId);
@@ -340,39 +309,30 @@ class ImageViewer {
         
         // Применяем режим с учётом полноэкранного режима
         if (document.fullscreenElement) {
-            // В полноэкранном режиме ВСЕГДА FIT
-            if (this.zoomCtrl) this.zoomCtrl.zoomToFit();
-            console.log('Fullscreen: переключение картинки -> FIT');
-        } else if (this.viewMode === 'fit') {
+            // в fullscreen всегда FIT
             if (this.zoomCtrl) this.zoomCtrl.zoomToFit();
         } else {
-            if (this.zoomCtrl) this.zoomCtrl.zoomTo100();
+            this.applyViewMode();
         }
         
         if (canvasEl) {
             canvasEl.style.transition = 'opacity 0.2s ease';
             canvasEl.style.opacity = '1';
-            setTimeout(() => {
-                if (canvasEl) canvasEl.style.transition = '';
-            }, 200);
+            setTimeout(() => { if (canvasEl) canvasEl.style.transition = ''; }, 200);
         }
     }
 
     async next() {
         if (this.onNavigate && !this.isLoading) {
             const newIndex = await this.onNavigate(1);
-            if (newIndex !== undefined && newIndex !== this.currentIndex) {
-                this.currentIndex = newIndex;
-            }
+            if (newIndex !== undefined && newIndex !== this.currentIndex) this.currentIndex = newIndex;
         }
     }
 
     async prev() {
         if (this.onNavigate && !this.isLoading) {
             const newIndex = await this.onNavigate(-1);
-            if (newIndex !== undefined && newIndex !== this.currentIndex) {
-                this.currentIndex = newIndex;
-            }
+            if (newIndex !== undefined && newIndex !== this.currentIndex) this.currentIndex = newIndex;
         }
     }
 
@@ -384,7 +344,6 @@ class ImageViewer {
         this.modal.classList.remove('active');
         document.body.classList.remove('modal-open');
         this.isVisible = false;
-        
         if (this.fabricCanvas) {
             this.fabricCanvas.dispose();
             this.fabricCanvas = null;
@@ -396,92 +355,96 @@ class ImageViewer {
     // ========== UI МЕТОДЫ ==========
     
     toggleViewMode() {
-        // Переключаем режим
         this.viewMode = this.viewMode === 'fit' ? '100' : 'fit';
         this.saveViewMode();
         this.updateViewModeButton();
-        
-        // Применяем режим
-        if (this.viewMode === 'fit') {
-            if (this.zoomCtrl) this.zoomCtrl.zoomToFit();
-        } else {
-            if (this.zoomCtrl) this.zoomCtrl.zoomTo100();
-        }
-        
-        // Если мы в полноэкранном режиме, запоминаем новый режим для восстановления
-        if (document.fullscreenElement) {
-            this._viewModeBeforeFullscreen = this.viewMode;
-        }
+        this.applyViewMode();
+        if (document.fullscreenElement) this._viewModeBeforeFullscreen = this.viewMode;
     }
 
-    zoomIn() { if (this.zoomCtrl) this.zoomCtrl.zoomIn(); }
-    zoomOut() { if (this.zoomCtrl) this.zoomCtrl.zoomOut(); }
-    zoom100() { if (this.zoomCtrl) this.zoomCtrl.zoomTo100(); }
+    zoomIn()   { if (this.zoomCtrl) this.zoomCtrl.zoomIn(); }
+    zoomOut()  { if (this.zoomCtrl) this.zoomCtrl.zoomOut(); }
+    zoom100()  { if (this.zoomCtrl) this.zoomCtrl.zoomTo100(); }
     fitToCanvas() { if (this.zoomCtrl) this.zoomCtrl.zoomToFit(); }
     
     rotateRight() { if (this.transformCtrl) this.transformCtrl.rotateRight(); }
-    rotateLeft() { if (this.transformCtrl) this.transformCtrl.rotateLeft(); }
+    rotateLeft()  { if (this.transformCtrl) this.transformCtrl.rotateLeft(); }
     
-    applyFilter() { 
-        if (this.filterCtrl) {
-            this.filterCtrl.applyFilter();
-        }
-    }
+    applyFilter()      { if (this.filterCtrl) this.filterCtrl.applyFilter(); }
+    resetFilter()      { if (this.filterCtrl) this.filterCtrl.resetFilter(); }
+    removeAllFilters() { if (this.filterCtrl) this.filterCtrl.resetFilter(); }
+    applyBrightness(v) { if (this.filterCtrl) this.filterCtrl.applyBrightness(v); }
+    applyContrast(v)   { if (this.filterCtrl) this.filterCtrl.applyContrast(v); }
     
-    resetFilter() { 
-        if (this.filterCtrl) {
-            this.filterCtrl.resetFilter();
-        }
-    }
-    
-    removeAllFilters() { 
-        if (this.filterCtrl) {
-            this.filterCtrl.resetFilter();
-        }
-    }
-    
-    applyBrightness(value) { 
-        if (this.filterCtrl) {
-            this.filterCtrl.applyBrightness(value);
-        }
-    }
-    
-    applyContrast(value) { 
-        if (this.filterCtrl) {
-            this.filterCtrl.applyContrast(value);
-        }
-    }
-    
-    toggleInfoPanel() { 
-        console.log('toggleInfoPanel called from ImageViewer');
-        
-        // Переключаем состояние панели
+    toggleInfoPanel() {
         this.ui.infoVisible = !this.ui.infoVisible;
-        
-        if (this.ui.infoVisible) {
-            if (this.ui.infoPanel) this.ui.infoPanel.classList.remove('hidden');
-        } else {
-            if (this.ui.infoPanel) this.ui.infoPanel.classList.add('hidden');
-        }
-        
+        if (this.ui.infoVisible) this.ui.infoPanel?.classList.remove('hidden');
+        else this.ui.infoPanel?.classList.add('hidden');
         this.ui.saveSettings();
+        if (document.fullscreenElement) this._infoVisibleBeforeFullscreen = this.ui.infoVisible;
         
-        // Если мы в полноэкранном режиме, запоминаем новое состояние для восстановления
-        if (document.fullscreenElement) {
-            this._infoVisibleBeforeFullscreen = this.ui.infoVisible;
-        }
+        setTimeout(() => {
+            this.handleResize();
+            this.applyViewMode();
+        }, 50);
     }
     
-    setBackground(color) { 
-        console.log('setBackground вызван с цветом:', color);
+    setBackground(color) {
         if (this.ui) {
             this.ui.setBackground(color);
             this.ui.updateActiveBgButton(color);
-        } else {
-            console.warn('UI Controller не инициализирован');
         }
     }
-
+    
+    // ========== КОПИРОВАНИЕ ==========
+    
+    copyFileName() {
+        if (!this.currentImage?.name) return this.showNotification('❌ Нет информации о файле');
+        this.copyToClipboard(this.currentImage.name, '✅ Имя файла скопировано');
+    }
+    
+    copyFilePath() {
+        if (!this.currentImage?.path) return this.showNotification('❌ Нет информации о пути');
+        let fullPath = this.currentImage.path;
+        if (this.currentImage.fileObj?.webkitRelativePath) fullPath = this.currentImage.fileObj.webkitRelativePath;
+        this.copyToClipboard(fullPath, '📁 Путь к файлу скопирован (относительный)');
+        console.log('Скопирован путь:', fullPath);
+    }
+    
+    copyToClipboard(text, successMessage) {
+        if (!text) return this.showNotification('❌ Нет данных для копирования');
+        if (navigator.clipboard?.writeText) {
+            navigator.clipboard.writeText(text).then(() => this.showNotification(successMessage || '✅ Скопировано'))
+                .catch(() => this.fallbackCopy(text));
+        } else {
+            this.fallbackCopy(text);
+        }
+    }
+    
+    fallbackCopy(text) {
+        const textarea = Object.assign(document.createElement('textarea'), { value: text, style: 'position:fixed;opacity:0' });
+        document.body.appendChild(textarea);
+        textarea.select();
+        document.execCommand('copy');
+        document.body.removeChild(textarea);
+        this.showNotification('✅ Скопировано (резервный способ)');
+    }
+    
+    showNotification(message) {
+        const notification = Object.assign(document.createElement('div'), {
+            textContent: message,
+            style: 'position:fixed;bottom:80px;left:50%;transform:translateX(-50%);background:rgba(0,0,0,0.8);color:#fff;padding:8px 16px;border-radius:8px;font-size:12px;z-index:9999;backdrop-filter:blur(8px);border:1px solid #ffaa44'
+        });
+        document.body.appendChild(notification);
+        setTimeout(() => { notification.style.opacity = '0'; setTimeout(() => notification.remove(), 300); }, 2000);
+    }
+    
+    applyViewMode() {
+        if (!this.currentImage || !this.fabricCanvas) return;
+        if (this.viewMode === 'fit') this.zoomCtrl?.zoomToFit();
+        else this.zoomCtrl?.zoomTo100();
+    }
+    
     // ========== ИНИЦИАЛИЗАЦИЯ СОБЫТИЙ ==========
     
     initEventListeners() {
@@ -491,11 +454,7 @@ class ImageViewer {
         document.getElementById('zoomInBtn')?.addEventListener('click', () => this.zoomIn());
         document.getElementById('zoomOutBtn')?.addEventListener('click', () => this.zoomOut());
         
-        const viewModeBtn = document.getElementById('zoomFitBtn');
-        if (viewModeBtn) {
-            viewModeBtn.addEventListener('click', () => this.toggleViewMode());
-        }
-        
+        document.getElementById('zoomFitBtn')?.addEventListener('click', () => this.toggleViewMode());
         this.fullscreenBtn?.addEventListener('click', () => this.toggleFullscreen());
         document.getElementById('toggleInfoBtn')?.addEventListener('click', () => this.toggleInfoPanel());
         document.getElementById('rotateLeftBtn')?.addEventListener('click', () => this.rotateLeft());
@@ -505,67 +464,55 @@ class ImageViewer {
         document.getElementById('resetFilterBtn')?.addEventListener('click', () => this.resetFilter());
         document.getElementById('removeFiltersBtn')?.addEventListener('click', () => this.removeAllFilters());
         
-        const bgButtons = document.querySelectorAll('.bg-color-btn');
-        console.log('Найдено кнопок фона:', bgButtons.length);
+        document.getElementById('copyNameBtn')?.addEventListener('click', () => this.copyFileName());
+        document.getElementById('copyPathBtn')?.addEventListener('click', () => this.copyFilePath());
         
-        bgButtons.forEach(btn => {
+        document.querySelectorAll('.bg-color-btn').forEach(btn => {
             btn.addEventListener('click', (e) => {
                 e.preventDefault();
-                const bg = btn.getAttribute('data-bg');
-                console.log('Нажата кнопка фона:', bg);
-                this.setBackground(bg);
+                this.setBackground(btn.getAttribute('data-bg'));
             });
         });
         
-        const previewCheckerToggle = document.getElementById('previewCheckerBg');
-        if (previewCheckerToggle) {
-            previewCheckerToggle.addEventListener('change', (e) => {
-                this.ui.settings.previewCheckerBg = e.target.checked;
-                this.ui.saveSettings();
-                const previewImages = document.querySelectorAll('.card-img');
-                previewImages.forEach(img => {
-                    if (e.target.checked) {
-                        img.classList.add('checker-bg');
-                    } else {
-                        img.classList.remove('checker-bg');
-                    }
-                });
-            });
-            previewCheckerToggle.checked = this.ui.settings.previewCheckerBg;
-        }
-        
-        const pixelArtToggle = document.getElementById('pixelArtMode');
-        if (pixelArtToggle) {
-            pixelArtToggle.addEventListener('change', (e) => {
-                this.ui.applyPixelArtSettings(e.target.checked);
-                if (this.fabricCanvas && this.fabricCanvas.contextContainer) {
-                    this.disableSmoothing(this.fabricCanvas.contextContainer);
-                    this.forceRender();
-                }
-            });
-            pixelArtToggle.checked = this.ui.settings.preservePixelArt;
-        }
+		const previewCheckerToggle = document.getElementById('previewCheckerBg');
+		if (previewCheckerToggle) {
+			previewCheckerToggle.addEventListener('change', (e) => {
+				this.ui.settings.previewCheckerBg = e.target.checked;
+				this.ui.saveSettings();
+				const previewImages = document.querySelectorAll('.card-img');
+				previewImages.forEach(img => {
+					if (e.target.checked) img.classList.add('checker-bg');
+					else img.classList.remove('checker-bg');
+				});
+			});
+			previewCheckerToggle.checked = this.ui.settings.previewCheckerBg;
+		}
+
+		const pixelArtToggle = document.getElementById('pixelArtMode');
+		if (pixelArtToggle) {
+			pixelArtToggle.addEventListener('change', (e) => {
+				this.ui.applyPixelArtSettings(e.target.checked);
+				if (this.fabricCanvas && this.fabricCanvas.contextContainer) {
+					this.disableSmoothing(this.fabricCanvas.contextContainer);
+					this.forceRender();
+				}
+			});
+			pixelArtToggle.checked = this.ui.settings.preservePixelArt;
+		}
         
         document.querySelectorAll('[data-brightness]').forEach(btn => {
-            btn.addEventListener('click', (e) => {
-                this.applyBrightness(parseInt(e.target.getAttribute('data-brightness')) / 100);
-            });
+            btn.addEventListener('click', () => this.applyBrightness(parseInt(btn.getAttribute('data-brightness')) / 100));
         });
-        
         document.querySelectorAll('[data-contrast]').forEach(btn => {
-            btn.addEventListener('click', (e) => {
-                this.applyContrast(parseInt(e.target.getAttribute('data-contrast')) / 100);
-            });
+            btn.addEventListener('click', () => this.applyContrast(parseInt(btn.getAttribute('data-contrast')) / 100));
         });
         
-        this.modal?.addEventListener('click', (e) => {
-            if (e.target === this.modal) this.close();
-        });
+        this.modal?.addEventListener('click', (e) => { if (e.target === this.modal) this.close(); });
         
         window.addEventListener('keydown', (e) => {
             if (!this.isVisible) return;
             if (e.key === 'ArrowRight') { e.preventDefault(); this.next(); }
-            if (e.key === 'ArrowLeft') { e.preventDefault(); this.prev(); }
+            if (e.key === 'ArrowLeft')  { e.preventDefault(); this.prev(); }
             if (e.key === 'Escape') this.close();
             if (e.key === 'i') this.toggleInfoPanel();
             if (e.key === '+') { e.preventDefault(); this.zoomIn(); }
@@ -580,92 +527,39 @@ class ImageViewer {
         
         document.addEventListener('fullscreenchange', () => {
             const fullscreenBtn = document.getElementById('fullscreenToggleBtn');
-            
             if (document.fullscreenElement) {
-                // ========== ВХОД ==========
                 if (fullscreenBtn) fullscreenBtn.innerHTML = '<i class="fas fa-compress"></i>';
-                
-                // Скрываем интерфейс
                 if (this.infoPanel) this.infoPanel.style.display = 'none';
-                const menu = document.querySelector('.fullscreen-menu');
-                if (menu) menu.style.display = 'none';
-                const closeBtn = document.querySelector('.close-modal');
-                if (closeBtn) closeBtn.style.display = 'none';
-                const topBar = document.querySelector('.top-bar');
-                if (topBar) topBar.style.display = 'none';
-                
+                document.querySelector('.fullscreen-menu')?.style.setProperty('display', 'none');
+                document.querySelector('.close-modal')?.style.setProperty('display', 'none');
+                document.querySelector('.top-bar')?.style.setProperty('display', 'none');
                 if (this.imageArea) {
                     this.imageArea.style.width = '100vw';
                     this.imageArea.style.height = '100vh';
                     this.imageArea.style.borderRadius = '0';
                 }
-                
                 setTimeout(() => {
-                    const newWidth = this.imageArea.clientWidth;
-                    const newHeight = this.imageArea.clientHeight;
-                    this.fabricCanvas.setDimensions({ width: newWidth, height: newHeight });
-                    
-                    // В полноэкранном режиме ВСЕГДА FIT
-                    if (this.zoomCtrl) this.zoomCtrl.zoomToFit();
-                    console.log('Fullscreen: применён FIT');
+                    this.fabricCanvas.setDimensions({ width: this.imageArea.clientWidth, height: this.imageArea.clientHeight });
+                    this.zoomCtrl?.zoomToFit();
                 }, 150);
-                
             } else {
-                // ========== ВЫХОД ==========
                 if (fullscreenBtn) fullscreenBtn.innerHTML = '<i class="fas fa-expand"></i>';
-                
-                // Показываем интерфейс
                 if (this.infoPanel) this.infoPanel.style.display = '';
-                const menu = document.querySelector('.fullscreen-menu');
-                if (menu) menu.style.display = '';
-                const closeBtn = document.querySelector('.close-modal');
-                if (closeBtn) closeBtn.style.display = '';
-                const topBar = document.querySelector('.top-bar');
-                if (topBar) topBar.style.display = '';
-                
+                document.querySelector('.fullscreen-menu')?.style.setProperty('display', '');
+                document.querySelector('.close-modal')?.style.setProperty('display', '');
+                document.querySelector('.top-bar')?.style.setProperty('display', '');
                 if (this.imageArea) {
                     this.imageArea.style.width = '';
                     this.imageArea.style.height = '';
                     this.imageArea.style.borderRadius = '';
                 }
-                
                 setTimeout(() => {
-                    const newWidth = this.imageArea.clientWidth;
-                    const newHeight = this.imageArea.clientHeight;
-                    this.fabricCanvas.setDimensions({ width: newWidth, height: newHeight });
-                    
-                    // ВОССТАНАВЛИВАЕМ СОХРАНЁННОЕ СОСТОЯНИЕ
-                    if (this.currentImage && this._savedScaleBeforeFullscreen !== undefined) {
-                        // Восстанавливаем масштаб изображения
-                        this.currentImage.scale(this._savedScaleBeforeFullscreen);
-                        this.currentImage.set({
-                            left: this._savedLeftBeforeFullscreen,
-                            top: this._savedTopBeforeFullscreen
-                        });
-                        
-                        // Восстанавливаем режим просмотрщика
-                        this.viewMode = this._savedViewModeBeforeFullscreen;
-                        this.updateViewModeButton();
-                        
-                        // Сбрасываем трансформации canvas
-                        this.fabricCanvas.setViewportTransform([1, 0, 0, 1, 0, 0]);
-                        this.fabricCanvas.setZoom(1);
-                        this.fabricCanvas.renderAll();
-                        
-                        console.log('Восстановлено:', {
-                            scale: this._savedScaleBeforeFullscreen,
-                            mode: this._savedViewModeBeforeFullscreen,
-                            left: this._savedLeftBeforeFullscreen,
-                            top: this._savedTopBeforeFullscreen
-                        });
-                    } else {
-                        // Если не сохранили - применяем текущий режим
-                        if (this.viewMode === 'fit') {
-                            if (this.zoomCtrl) this.zoomCtrl.zoomToFit();
-                        } else {
-                            if (this.zoomCtrl) this.zoomCtrl.zoomTo100();
-                        }
-                    }
+                    this.fabricCanvas.setDimensions({ width: this.imageArea.clientWidth, height: this.imageArea.clientHeight });
+                    // Восстанавливаем режим, который был до fullscreen
+                    const savedMode = this._savedViewModeBeforeFullscreen || '100';
+                    this.viewMode = savedMode;
+                    this.updateViewModeButton();
+                    this.applyViewMode();
                     this.forceRender();
                 }, 150);
             }
@@ -674,46 +568,31 @@ class ImageViewer {
 
     toggleFullscreen() {
         if (!document.fullscreenElement) {
-            // Сохраняем ВСЁ состояние ДО входа
             if (this.currentImage) {
-                this._savedScaleBeforeFullscreen = this.currentImage.scaleX;
-                this._savedLeftBeforeFullscreen = this.currentImage.left;
-                this._savedTopBeforeFullscreen = this.currentImage.top;
-                this._savedViewModeBeforeFullscreen = this.viewMode;
-                // Дополнительно сохраняем трансформации canvas
-                this._savedZoomBeforeFullscreen = this.fabricCanvas.getZoom();
-                this._savedViewport = this.fabricCanvas.viewportTransform;
-                console.log('Сохранено:', {
-                    scale: this._savedScaleBeforeFullscreen,
-                    mode: this._savedViewModeBeforeFullscreen,
-                    left: this._savedLeftBeforeFullscreen,
-                    top: this._savedTopBeforeFullscreen
-                });
+                this._savedViewModeBeforeFullscreen = this.viewMode; // только режим, позицию не трогаем
             }
-            
-            const elem = document.documentElement;
-            if (elem.requestFullscreen) {
-                elem.requestFullscreen().catch(err => console.log('Fullscreen error:', err));
-            }
+            document.documentElement.requestFullscreen?.().catch(err => console.log('Fullscreen error:', err));
         } else {
-            document.exitFullscreen().catch(err => console.log('Exit fullscreen error:', err));
+            document.exitFullscreen?.().catch(err => console.log('Exit fullscreen error:', err));
         }
     }
 
     handleResize() {
         if (!this.isVisible || !this.fabricCanvas) return;
-        
         const newWidth = this.imageArea.clientWidth;
         const newHeight = this.imageArea.clientHeight;
-        
         if (newWidth > 0 && newHeight > 0) {
             this.fabricCanvas.setDimensions({ width: newWidth, height: newHeight });
-            
-            // Только центрируем, если не в полноэкранном режиме
             if (!document.fullscreenElement && this.currentImage) {
-                this.fabricCanvas.centerObject(this.currentImage);
-                this.fabricCanvas.renderAll();
+                this.applyViewMode();  // пересчёт масштаба при изменении размера окна
             }
         }
     }
+	
+	resetFilter() { 
+    if (this.filterCtrl) this.filterCtrl.resetFilter(); 
+	}
+	removeAllFilters() { 
+		if (this.filterCtrl) this.filterCtrl.resetFilter(); 
+	}
 }

@@ -66,8 +66,17 @@
             
             <!-- Панель инструментов -->
             <div class="info-panel" id="infoPanel">
-                <h4><i class="fas fa-info-circle"></i> Информация</h4>
-                <div id="fileDetails" class="file-props">—</div>
+				<h4><i class="fas fa-info-circle"></i> Информация</h4>
+				<div id="fileDetails" class="file-props">—</div>
+
+				<div class="filter-buttons">
+					<button class="filter-btn" id="copyNameBtn" title="Копировать имя файла">
+						<i class="fas fa-copy"></i> Копировать имя
+					</button>
+					<button class="filter-btn" id="copyPathBtn" title="Копировать полный путь">
+						<i class="fas fa-folder-open"></i> Копировать путь
+					</button>
+				</div>
                 
 				<h4><i class="fas fa-filter"></i> Фильтры</h4>
 				<select id="filterSelect">
@@ -102,31 +111,30 @@
                     <button class="bg-color-btn bg-pink" data-bg="pink" title="Розовый"></button>
                     <button class="bg-color-btn bg-green" data-bg="green" title="Зелёный"></button>
                 </div>
-                
-                <h4><i class="fas fa-globe"></i> Глобальные настройки</h4>
-                <div class="file-props settings-panel">
-                    <div class="setting-item">
-                        <label for="pixelArtMode">
-                            <i class="fas fa-pixelated"></i> Режим пиксельной графики
-                        </label>
-                        <label class="switch">
-                            <input type="checkbox" id="pixelArtMode" checked>
-                            <span class="slider"></span>
-                        </label>
-                    </div>
-                    <div class="setting-item">
-                        <label for="previewCheckerBg">
-                            <i class="fas fa-checkerboard"></i> Шахматный фон для превью (альфа-канал)
-                        </label>
-                        <label class="switch">
-                            <input type="checkbox" id="previewCheckerBg" checked>
-                            <span class="slider"></span>
-                        </label>
-                    </div>
-                    <div class="setting-item">
-                        <small><i class="fas fa-info-circle"></i> Настройки сохраняются автоматически</small>
-                    </div>
-                </div>
+				<h4><i class="fas fa-globe"></i> Глобальные настройки</h4>
+				<div class="file-props settings-panel">
+					<div class="setting-item">
+						<label for="pixelArtMode">
+							<i class="fas fa-pixelated"></i> Режим пиксельной графики
+						</label>
+						<label class="switch">
+							<input type="checkbox" id="pixelArtMode" checked>
+							<span class="slider"></span>
+						</label>
+					</div>
+					<div class="setting-item">
+						<label for="previewCheckerBg">
+							<i class="fas fa-checkerboard"></i> Шахматный фон для превью (альфа-канал)
+						</label>
+						<label class="switch">
+							<input type="checkbox" id="previewCheckerBg" checked>
+							<span class="slider"></span>
+						</label>
+					</div>
+					<div class="setting-item">
+						<small><i class="fas fa-info-circle"></i> Настройки сохраняются автоматически</small>
+					</div>
+				</div>
             </div>
         </div>
         

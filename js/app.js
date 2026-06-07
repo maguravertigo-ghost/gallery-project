@@ -112,7 +112,6 @@ document.addEventListener('DOMContentLoaded', () => {
     function applyCheckerBackgroundToPreviews() {
         const saved = localStorage.getItem('gallerySettings');
         let useCheckerBg = true;
-        
         if (saved) {
             try {
                 const settings = JSON.parse(saved);
@@ -121,7 +120,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
             } catch(e) {}
         }
-        
         const previewImages = document.querySelectorAll('.card-img');
         previewImages.forEach(img => {
             if (useCheckerBg) {
@@ -131,6 +129,7 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         });
     }
+	// Вызвать после загрузки галереи и после рендера
     
     // Обработчик выбора папки (оптимизированный)
     const folderBtn = document.getElementById('folderSelectorBtn');
