@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+	<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate, max-age=0">
+	<meta http-equiv="Pragma" content="no-cache">
+	<meta http-equiv="Expires" content="0">
+	
+    <title>Pixel Gallery Pro | Редактор изображений</title>
+    
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    
+    <!-- Fabric.js для работы с canvas -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/fabric.js/5.3.0/fabric.min.js"></script>
+    
+    <!-- Стили проекта -->
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+    <div class="app">
+        <!-- Верхняя панель -->
+        <div class="top-bar">
+            <div class="logo">
+                <i class="fas fa-images"></i>
+                <span>Pixel Gallery Pro</span>
+            </div>
+            <div class="folder-selector" id="folderSelectorBtn">
+                <i class="fas fa-folder-open"></i>
+                <span id="folderName">Выбрать папку</span>
+                <i class="fas fa-chevron-down"></i>
+            </div>
+            <div class="stats" id="statsPanel">0 изображений</div>
+            <div class="view-toggle">
+                <button class="view-btn active" data-view="grid">
+                    <i class="fas fa-th-large"></i>
+                </button>
+                <button class="view-btn" data-view="list">
+                    <i class="fas fa-list-ul"></i>
+                </button>
+            </div>
+            <input type="file" id="folderInput" webkitdirectory directory multiple style="display: none;">
+        </div>
+
+        <!-- Галерея -->
+        <div id="galleryContainer" class="gallery-grid">
+            <div class="empty-folder">
+                <i class="fas fa-folder-open"></i> 
+                Выберите папку с изображениями
+            </div>
+        </div>
+    </div>
+
+    <!-- Модальное окно просмотра -->
+    <div id="modal" class="modal">
+        <div class="close-modal" id="closeModalBtn">
+            <i class="fas fa-times"></i>
+        </div>
+        <div class="modal-content">
+            <!-- Область с изображением -->
+            <div class="image-area" id="imageArea">
+                <canvas id="fabricCanvas"></canvas>
+            </div>
+            
+            <!-- Панель инструментов -->
+            <div class="info-panel" id="infoPanel">
+                <h4><i class="fas fa-info-circle"></i> Информация</h4>
+                <div id="fileDetails" class="file-props">—</div>
+                
+				<h4><i class="fas fa-filter"></i> Фильтры</h4>
+				<select id="filterSelect">
+					<option value="none">✨ Оригинал</option>
+					<option value="grayscale">⚫ Ч/б</option>
+					<option value="sepia">🟤 Сепия</option>
+					<option value="invert">🎞️ Инверсия</option>
+					<option value="brightness">☀️ Яркость</option>
+					<option value="contrast">🌓 Контраст</option>
+					<option value="saturation">🌈 Насыщенность</option>
+					<option value="blur">💧 Размытие</option>
+					<option value="vintage">📷 Винтаж</option>
+					<option value="polaroid">📸 Полароид</option>
+					<option value="kodachrome">🎨 Кодахром</option>
+					<option value="technicolor">🌈 Техниколор</option>
+				</select>
+
+				<div id="filterControls" style="display: none;" class="filter-controls">
+					<h4><i class="fas fa-sliders-h"></i> Настройка фильтра</h4>
+					<input type="range" id="filterAmount" min="0" max="100" value="50">
+				</div>
+
+				<div class="filter-buttons">
+					<button class="filter-btn" id="resetFilterBtn">Сбросить фильтр</button>
+				</div>
+                <h4><i class="fas fa-palette"></i> Фон просмотра</h4>
+                <div class="background-buttons" id="backgroundButtons">
+                    <button class="bg-color-btn bg-dark" data-bg="dark" title="Тёмный"></button>
+                    <button class="bg-color-btn bg-black" data-bg="black" title="Чёрный"></button>
+                    <button class="bg-color-btn bg-white" data-bg="white" title="Белый"></button>
+                    <button class="bg-color-btn bg-checker" data-bg="checker" title="Шахматка"></button>
+                    <button class="bg-color-btn bg-pink" data-bg="pink" title="Розовый"></button>
+                    <button class="bg-color-btn bg-green" data-bg="green" title="Зелёный"></button>
+                </div>
+                
+                <h4><i class="fas fa-globe"></i> Глобальные настройки</h4>
+                <div class="file-props settings-panel">
+                    <div class="setting-item">
+                        <label for="pixelArtMode">
+                            <i class="fas fa-pixelated"></i> Режим пиксельной графики
+                        </label>
+                        <label class="switch">
+                            <input type="checkbox" id="pixelArtMode" checked>
+                            <span class="slider"></span>
+                        </label>
+                    </div>
+                    <div class="setting-item">
+                        <label for="previewCheckerBg">
+                            <i class="fas fa-checkerboard"></i> Шахматный фон для превью (альфа-канал)
+                        </label>
+                        <label class="switch">
+                            <input type="checkbox" id="previewCheckerBg" checked>
+                            <span class="slider"></span>
+                        </label>
+                    </div>
+                    <div class="setting-item">
+                        <small><i class="fas fa-info-circle"></i> Настройки сохраняются автоматически</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Нижняя панель управления -->
+        <div class="fullscreen-menu">
+            <button class="ctrl-btn" id="zoomOutBtn" title="Уменьшить (-)"><i class="fas fa-search-minus"></i></button>
+            <button class="ctrl-btn" id="zoomFitBtn" title="Режим просмотра"><i class="fas fa-expand-alt"></i></button>
+            <button class="ctrl-btn" id="zoomInBtn" title="Увеличить (+)"><i class="fas fa-search-plus"></i></button>
+            <div class="separator"></div>
+            <button class="ctrl-btn" id="fullscreenToggleBtn" title="Полный экран (F)">
+                <i class="fas fa-expand"></i>
+            </button>
+            <button class="ctrl-btn" id="rotateLeftBtn" title="Повернуть влево (R)"><i class="fas fa-undo-alt"></i></button>
+            <button class="ctrl-btn" id="rotateRightBtn" title="Повернуть вправо (r)"><i class="fas fa-redo-alt"></i></button>
+            <div class="separator"></div>
+            <button class="ctrl-btn" id="toggleInfoBtn" title="Информация (I)"><i class="fas fa-info-circle"></i></button>
+            <button class="ctrl-btn" id="prevFullBtn" title="Предыдущее (←)"><i class="fas fa-chevron-left"></i></button>
+            <button class="ctrl-btn" id="nextFullBtn" title="Следующее (→)"><i class="fas fa-chevron-right"></i></button>
+        </div>
+    </div>
+
+    <!-- Прогресс-бар загрузки -->
+    <div id="loadingOverlay" class="loading-overlay">
+        <div class="loading-container">
+            <div class="loading-spinner"></div>
+            <div class="loading-text">Загрузка папки...</div>
+            <div class="loading-status" id="loadingStatus"></div>
+            <div class="loading-progress">
+                <div class="loading-progress-bar" id="loadingProgressBar"></div>
+            </div>
+            <div class="loading-percent" id="loadingPercent">0%</div>
+        </div>
+    </div>
+	<div class="warning-banner" style="display: none; background: #ffaa44; color: #121212; padding: 8px; text-align: center; font-size: 12px;">
+		⚠️ Внимание: при выборе папок с большим количеством файлов (>1000) загрузка может занять время
+	</div>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('DOM загружен!');
+            
+            // Проверяем наличие loading overlay
+            var overlay = document.getElementById('loadingOverlay');
+            console.log('Overlay элемент:', overlay);
+            
+            if (overlay) {
+                console.log('Overlay НАЙДЕН!');
+            } else {
+                console.error('Overlay НЕ НАЙДЕН! Добавьте HTML элемент');
+            }
+        });
+    </script>
+	
+    <!-- Скрипты проекта - порядок важен! -->
+    <script src="js/loadingController.js"></script>
+    <script src="js/loaders/BaseLoader.js"></script>
+    <script src="js/loaders/RasterLoader.js"></script>
+    <script src="js/loaders/GifLoader.js"></script>
+    <script src="js/loaders/SvgLoader.js"></script>
+    <script src="js/imageLoader.js"></script>
+    <script src="js/utils.js"></script>
+    <script src="js/gallery.js"></script>
+    <script src="js/zoomController.js"></script>
+    <script src="js/transformController.js"></script>
+    <script src="js/filterController.js"></script>
+    <script src="js/uiController.js"></script>
+    <script src="js/imageViewer.js"></script>
+    <script src="js/app.js"></script>
+
+</body>
+</html>

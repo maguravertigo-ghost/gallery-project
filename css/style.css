@@ -1,0 +1,809 @@
+/* ========== RESET & GLOBAL ========== */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: 'Segoe UI', 'Roboto', system-ui, sans-serif;
+    background: linear-gradient(135deg, #0f0f1a 0%, #1a1a2e 100%);
+    color: #f5f5f5;
+    overflow-x: hidden;
+}
+
+body.modal-open {
+    overflow: hidden;
+}
+
+/* ========== TOP BAR ========== */
+.top-bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 15px 30px;
+    background: linear-gradient(135deg, rgba(18,18,28,0.95), rgba(28,28,38,0.95));
+    backdrop-filter: blur(12px);
+    border-bottom: 1px solid rgba(255,255,255,0.1);
+    flex-wrap: wrap;
+    gap: 12px;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+}
+
+.logo {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 1.3rem;
+    font-weight: 600;
+}
+
+.logo span {
+    background: linear-gradient(135deg, #ffaa44, #ff5588);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+}
+
+.stats {
+    background: rgba(0,0,0,0.5);
+    backdrop-filter: blur(8px);
+    border-radius: 32px;
+    padding: 5px 14px;
+    font-size: 0.9rem;
+}
+
+.folder-selector {
+    background: linear-gradient(135deg, #2a2a3c, #1e1e2e);
+    border-radius: 48px;
+    padding: 6px 20px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    border: 1px solid rgba(255,255,255,0.1);
+}
+
+.folder-selector:hover {
+    transform: translateY(-2px);
+    border-color: #ffaa44;
+    box-shadow: 0 5px 15px rgba(255,170,68,0.2);
+}
+
+.view-toggle {
+    display: flex;
+    gap: 8px;
+    background: rgba(0,0,0,0.3);
+    padding: 4px 8px;
+    border-radius: 48px;
+}
+
+.view-btn {
+    background: transparent;
+    border: none;
+    color: #ccc;
+    font-size: 1.2rem;
+    padding: 6px 16px;
+    border-radius: 40px;
+    cursor: pointer;
+    transition: 0.3s;
+}
+
+.view-btn.active {
+    background: linear-gradient(135deg, #ffaa44, #ff5588);
+    color: #121212;
+}
+
+/* ========== GALLERY ========== */
+.gallery-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 20px;
+    padding: 30px;
+}
+
+.gallery-list {
+    padding: 20px;
+}
+
+.card {
+    background: linear-gradient(135deg, #1e1e2c, #181826);
+    border-radius: 20px;
+    overflow: hidden;
+    cursor: pointer;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    border: 1px solid rgba(255,255,255,0.08);
+}
+
+.card:hover {
+    transform: translateY(-5px);
+    border-color: #ffaa44;
+    box-shadow: 0 14px 28px rgba(0,0,0,0.4);
+}
+
+.card-img {
+    width: 100%;
+    aspect-ratio: 1/1;
+    object-fit: cover;
+    background: #0f0f1a;
+    /* Пиксельный рендеринг для превью */
+    image-rendering: crisp-edges;
+    image-rendering: pixelated;
+    image-rendering: pixelated;
+    -ms-interpolation-mode: nearest-neighbor;
+}
+
+/* Шахматный фон для превью с альфа-каналом */
+.card-img.checker-bg {
+    background-image: linear-gradient(45deg, #808080 25%, transparent 25%),
+                      linear-gradient(-45deg, #808080 25%, transparent 25%),
+                      linear-gradient(45deg, transparent 75%, #808080 75%),
+                      linear-gradient(-45deg, transparent 75%, #808080 75%);
+    background-size: 20px 20px;
+    background-position: 0 0, 0 10px, 10px -10px, -10px 0px;
+    background-color: transparent;
+}
+
+.card-info {
+    padding: 10px;
+    display: flex;
+    justify-content: space-between;
+    background: rgba(0,0,0,0.3);
+    font-size: 0.75rem;
+}
+
+/* ========== MODAL ========== */
+.modal {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.96);
+    backdrop-filter: blur(20px);
+    z-index: 1000;
+    justify-content: center;
+    align-items: center;
+}
+
+.modal.active {
+    display: flex;
+    animation: fadeIn 0.3s ease;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+.modal-content {
+    display: flex;
+    width: 90%;
+    max-width: 1400px;
+    height: 85%;
+    gap: 20px;
+    background: transparent;
+    padding: 20px;
+}
+
+.image-area {
+    flex: 3;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    background: #1a1a2a;
+    border-radius: 28px;
+    overflow: hidden;
+    position: relative;
+}
+
+/* Шахматный фон для области просмотра */
+.image-area.checker-bg {
+    background-image: linear-gradient(45deg, #808080 25%, transparent 25%),
+                      linear-gradient(-45deg, #808080 25%, transparent 25%),
+                      linear-gradient(45deg, transparent 75%, #808080 75%),
+                      linear-gradient(-45deg, transparent 75%, #808080 75%);
+    background-size: 20px 20px;
+    background-position: 0 0, 0 10px, 10px -10px, -10px 0px;
+    background-color: transparent;
+    background-repeat: repeat;
+}
+
+#fabricCanvas {
+    width: 100%;
+    height: 100%;
+    display: block;
+    /* Ключевые настройки для пиксельного рендеринга в canvas */
+    image-rendering: crisp-edges;
+    image-rendering: pixelated;
+    image-rendering: pixelated;
+    -ms-interpolation-mode: nearest-neighbor;
+}
+
+canvas {
+    image-rendering: crisp-edges !important;
+    image-rendering: pixelated !important;
+}
+
+.info-panel {
+    flex: 1;
+    background: linear-gradient(135deg, rgba(25,25,35,0.95), rgba(20,20,30,0.95));
+    backdrop-filter: blur(24px);
+    border-radius: 32px;
+    padding: 22px 18px;
+    overflow-y: auto;
+    border: 1px solid rgba(255,255,255,0.15);
+}
+
+.info-panel.hidden {
+    display: none;
+}
+
+.info-panel h4 {
+    font-size: 1rem;
+    margin-bottom: 12px;
+    margin-top: 20px;
+    color: #ffaa44;
+    border-left: 3px solid #ffaa44;
+    padding-left: 12px;
+}
+
+.info-panel h4:first-child {
+    margin-top: 0;
+}
+
+.file-props {
+    font-size: 0.85rem;
+    line-height: 1.6;
+    background: rgba(0,0,0,0.3);
+    padding: 14px;
+    border-radius: 20px;
+    margin-bottom: 20px;
+}
+
+.file-props i {
+    margin-right: 8px;
+    color: #ffaa44;
+}
+
+/* ========== CONTROLS ========== */
+.fullscreen-menu {
+    position: absolute;
+    bottom: 24px;
+    left: 50%;
+    transform: translateX(-50%);
+    display: flex;
+    gap: 8px;
+    background: rgba(0, 0, 0, 0.8);
+    backdrop-filter: blur(16px);
+    padding: 10px 20px;
+    border-radius: 60px;
+    z-index: 1010;
+    flex-wrap: wrap;
+    justify-content: center;
+}
+
+.ctrl-btn {
+    background: none;
+    border: none;
+    font-size: 1.2rem;
+    color: white;
+    cursor: pointer;
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    transition: all 0.2s;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.ctrl-btn:hover {
+    background: #ffaa44;
+    color: black;
+    transform: scale(1.1);
+}
+
+.separator {
+    width: 1px;
+    height: 30px;
+    background: rgba(255,255,255,0.3);
+    margin: 0 5px;
+}
+
+.close-modal {
+    position: absolute;
+    top: 20px;
+    right: 28px;
+    background: rgba(0,0,0,0.6);
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    font-size: 1.6rem;
+    z-index: 1010;
+    transition: 0.3s;
+}
+
+.close-modal:hover {
+    background: #ff4444;
+    transform: rotate(90deg);
+}
+
+.empty-folder {
+    text-align: center;
+    padding: 60px;
+    color: #aaa;
+}
+
+select, .filter-btn {
+    background: #2a2a3a;
+    border: none;
+    padding: 8px 14px;
+    border-radius: 30px;
+    color: white;
+    cursor: pointer;
+    margin-top: 8px;
+    width: 100%;
+}
+
+.filter-buttons {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin: 12px 0;
+}
+
+.filter-btn {
+    flex: 1;
+    text-align: center;
+    font-size: 0.75rem;
+}
+
+.reset-btn {
+    background: #aa4455;
+}
+
+/* Глобальные настройки */
+.settings-panel {
+    margin-top: 20px;
+    padding-top: 20px;
+    border-top: 1px solid rgba(255,255,255,0.1);
+}
+
+.setting-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 10px;
+    font-size: 0.8rem;
+}
+
+.setting-item label {
+    cursor: pointer;
+}
+
+/* Toggle switch */
+.switch {
+    position: relative;
+    display: inline-block;
+    width: 40px;
+    height: 20px;
+}
+
+.switch input {
+    opacity: 0;
+    width: 0;
+    height: 0;
+}
+
+.slider {
+    position: absolute;
+    cursor: pointer;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: #2a2a3c;
+    transition: 0.3s;
+    border-radius: 20px;
+}
+
+.slider:before {
+    position: absolute;
+    content: "";
+    height: 16px;
+    width: 16px;
+    left: 2px;
+    bottom: 2px;
+    background-color: white;
+    transition: 0.3s;
+    border-radius: 50%;
+}
+
+input:checked + .slider {
+    background-color: #ffaa44;
+}
+
+input:checked + .slider:before {
+    transform: translateX(20px);
+}
+
+/* ========== RESPONSIVE ========== */
+@media (max-width: 850px) {
+    .modal-content { 
+        flex-direction: column; 
+    }
+    .info-panel { 
+        width: 100%; 
+        max-height: 35%; 
+    }
+    .image-area { 
+        height: 60%; 
+    }
+    .fullscreen-menu { 
+        gap: 4px; 
+        padding: 6px 12px; 
+    }
+    .ctrl-btn { 
+        width: 34px; 
+        height: 34px; 
+        font-size: 0.9rem; 
+    }
+    .top-bar { 
+        padding: 12px 16px; 
+    }
+}
+
+/* ЖЁСТКИЕ НАСТРОЙКИ ДЛЯ ПИКСЕЛЬНОГО РЕНДЕРИНГА */
+#fabricCanvas,
+.fabricCanvas,
+canvas {
+    /* Отключаем всякое сглаживание */
+    image-rendering: crisp-edges !important;
+    image-rendering: pixelated !important;
+    image-rendering: crisp-edges !important;
+    image-rendering: optimizeSpeed !important;
+    -ms-interpolation-mode: nearest-neighbor !important;
+}
+
+/* Дополнительно для canvas контекста */
+canvas:active,
+canvas:focus {
+    outline: none;
+}
+
+/* Предотвращение артефактов при панорамировании */
+#fabricCanvas {
+    display: block;
+    /* Убираем возможное сглаживание при трансформациях */
+    transform: translateZ(0);
+    backface-visibility: hidden;
+    -webkit-backface-visibility: hidden;
+}
+
+/* Для canvas контекста */
+canvas {
+    outline: none;
+    -webkit-tap-highlight-color: transparent;
+}
+
+/* Убираем артефакты при скролле */
+.image-area {
+    will-change: transform;
+}
+
+/* Улучшенное отображение SVG */
+.card-img[src$=".svg"] {
+    background: transparent;
+}
+
+/* Для canvas при отображении SVG */
+.fabricCanvas svg {
+    display: block;
+    width: 100%;
+    height: 100%;
+}
+
+/* Шахматный фон для превью по умолчанию */
+.card-img {
+    width: 100%;
+    aspect-ratio: 1/1;
+    object-fit: cover;
+    background: #0f0f1a;
+    image-rendering: pixelated;
+    image-rendering: crisp-edges;
+    -ms-interpolation-mode: nearest-neighbor;
+}
+
+/* Шахматный фон для превью */
+.card-img.checker-bg {
+    background-image: linear-gradient(45deg, #808080 25%, transparent 25%),
+                      linear-gradient(-45deg, #808080 25%, transparent 25%),
+                      linear-gradient(45deg, transparent 75%, #808080 75%),
+                      linear-gradient(-45deg, transparent 75%, #808080 75%);
+    background-size: 16px 16px;
+    background-position: 0 0, 0 8px, 8px -8px, -8px 0px;
+    background-color: transparent;
+    background-repeat: repeat;
+}
+.card-img:not(.no-checker) {
+    background-image: linear-gradient(45deg, #808080 25%, transparent 25%),
+                      linear-gradient(-45deg, #808080 25%, transparent 25%),
+                      linear-gradient(45deg, transparent 75%, #808080 75%),
+                      linear-gradient(-45deg, transparent 75%, #808080 75%);
+    background-size: 20px 20px;
+    background-position: 0 0, 0 10px, 10px -10px, -10px 0px;
+    background-color: transparent;
+}
+
+/* Цветовые кнопки фона */
+.background-buttons {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    margin: 12px 0;
+}
+
+.bg-color-btn {
+    width: 48px;
+    height: 48px;
+    border-radius: 12px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    border: 2px solid rgba(255,255,255,0.2);
+    box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+    position: relative;
+}
+
+.bg-color-btn:hover {
+    transform: scale(1.1);
+    border-color: #ffaa44;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+}
+
+/* Активная кнопка - оранжевая рамка, без градиента внутри */
+.bg-color-btn.active {
+    border: 2px solid #ffaa44;
+    box-shadow: 0 0 0 2px rgba(255,170,68,0.5);
+    transform: scale(1.05);
+}
+
+/* Цвета кнопок (без градиента) */
+.bg-dark { background: #1a1a2a; }
+.bg-black { background: #000000; }
+.bg-white { background: #f0f0f0; border-color: rgba(0,0,0,0.2); }
+.bg-pink { background: #FF00FF; }
+.bg-green { background: #66FF00; }
+
+/* Кнопка шахматки - правильное отображение */
+.bg-checker {
+    background-image: linear-gradient(45deg, #808080 25%, transparent 25%),
+                      linear-gradient(-45deg, #808080 25%, transparent 25%),
+                      linear-gradient(45deg, transparent 75%, #808080 75%),
+                      linear-gradient(-45deg, transparent 75%, #808080 75%);
+    background-size: 16px 16px;
+    background-position: 0 0, 0 8px, 8px -8px, -8px 0px;
+    background-color: #e0e0e0;
+    background-repeat: repeat;
+}
+
+/* Убираем псевдоэлемент, который создавал оранжевый градиент */
+.bg-color-btn::after {
+    display: none;
+}
+
+.bg-color-btn.active::after {
+    opacity: 1;
+}
+
+/* Для белой кнопки - тёмная обводка */
+.bg-white.active {
+    box-shadow: 0 0 0 2px #ffaa44;
+}
+/* ========== ПРОГРЕСС-БАР ЗАГРУЗКИ ========== */
+.loading-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.8);
+    backdrop-filter: blur(8px);
+    z-index: 9999;  /* Убедитесь что значение высокое */
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.3s ease, visibility 0.3s ease;
+}
+
+.loading-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.8);
+    backdrop-filter: blur(8px);
+    z-index: 9999;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.3s ease, visibility 0.3s ease;
+}
+
+.loading-overlay.active {
+    opacity: 1;
+    visibility: visible;
+}
+
+.loading-container {
+    background: linear-gradient(135deg, #1e1e2c, #181826);
+    border-radius: 24px;
+    padding: 30px 40px;
+    text-align: center;
+    border: 1px solid rgba(255,255,255,0.1);
+    box-shadow: 0 20px 40px rgba(0,0,0,0.3);
+    min-width: 300px;
+}
+
+.loading-spinner {
+    width: 50px;
+    height: 50px;
+    border: 3px solid rgba(102,126,234,0.3);
+    border-top-color: #667eea;
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+    margin: 0 auto 20px auto;
+}
+
+@keyframes spin {
+    to { transform: rotate(360deg); }
+}
+
+.loading-text {
+    font-size: 1rem;
+    color: #fff;
+    margin-bottom: 15px;
+}
+
+.loading-progress {
+    width: 100%;
+    height: 4px;
+    background: rgba(255,255,255,0.1);
+    border-radius: 4px;
+    overflow: hidden;
+    margin-top: 10px;
+}
+
+.loading-progress-bar {
+    width: 0%;
+    height: 100%;
+    background: linear-gradient(90deg, #667eea, #764ba2);
+    border-radius: 4px;
+    transition: width 0.3s ease;
+}
+
+.loading-percent {
+    font-size: 0.8rem;
+    color: #aaa;
+    margin-top: 8px;
+}
+
+.loading-status {
+    font-size: 0.8rem;
+    color: #aaa;
+    margin-top: 5px;
+    margin-bottom: 10px;
+    font-family: monospace;
+}
+
+/* Принудительные размеры для SVG в canvas */
+.fabricCanvas svg,
+.fabricCanvas image {
+    width: 100% !important;
+    height: 100% !important;
+}
+
+/* Панель управления фильтрами */
+.filter-controls {
+    background: rgba(0,0,0,0.3);
+    border-radius: 20px;
+    padding: 15px;
+    margin-top: 10px;
+}
+
+.filter-controls h4 {
+    margin-top: 0 !important;
+    font-size: 0.85rem;
+}
+
+.filter-controls input {
+    width: 100%;
+    height: 4px;
+    -webkit-appearance: none;
+    background: #2a2a3c;
+    border-radius: 5px;
+    margin: 10px 0;
+}
+
+.filter-controls input::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    background: #ffaa44;
+    cursor: pointer;
+}
+
+/* Скрытие элементов в полноэкранном режиме */
+.fullscreen-menu.hidden,
+.close-modal.hidden,
+.info-panel.hidden {
+    display: none !important;
+}
+
+/* В полноэкранном режиме canvas занимает 100% */
+:-webkit-full-screen .image-area {
+    width: 100vw !important;
+    height: 100vh !important;
+    border-radius: 0 !important;
+}
+
+:-moz-full-screen .image-area {
+    width: 100vw !important;
+    height: 100vh !important;
+    border-radius: 0 !important;
+}
+
+:fullscreen .image-area {
+    width: 100vw !important;
+    height: 100vh !important;
+    border-radius: 0 !important;
+}
+
+/* Canvas в полноэкранном режиме */
+:-webkit-full-screen #fabricCanvas {
+    width: 100vw !important;
+    height: 100vh !important;
+}
+
+:-moz-full-screen #fabricCanvas {
+    width: 100vw !important;
+    height: 100vh !important;
+}
+
+:fullscreen #fabricCanvas {
+    width: 100vw !important;
+    height: 100vh !important;
+}
+
+/* Модальное окно в полноэкранном режиме */
+:-webkit-full-screen .modal .modal-content {
+    padding: 0 !important;
+    width: 100% !important;
+    height: 100% !important;
+}
+
+:-moz-full-screen .modal .modal-content {
+    padding: 0 !important;
+    width: 100% !important;
+    height: 100% !important;
+}
+
+:fullscreen .modal .modal-content {
+    padding: 0 !important;
+    width: 100% !important;
+    height: 100% !important;
+}
