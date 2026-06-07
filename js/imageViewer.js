@@ -340,8 +340,9 @@ class ImageViewer {
         
         // Применяем режим с учётом полноэкранного режима
         if (document.fullscreenElement) {
-            // В полноэкранном режиме всегда FIT
+            // В полноэкранном режиме ВСЕГДА FIT
             if (this.zoomCtrl) this.zoomCtrl.zoomToFit();
+            console.log('Fullscreen: переключение картинки -> FIT');
         } else if (this.viewMode === 'fit') {
             if (this.zoomCtrl) this.zoomCtrl.zoomToFit();
         } else {
@@ -581,10 +582,10 @@ class ImageViewer {
             const fullscreenBtn = document.getElementById('fullscreenToggleBtn');
             
             if (document.fullscreenElement) {
-                // ========== ВХОД В ПОЛНОЭКРАННЫЙ РЕЖИМ ==========
+                // ========== ВХОД ==========
                 if (fullscreenBtn) fullscreenBtn.innerHTML = '<i class="fas fa-compress"></i>';
                 
-                // Скрываем все элементы интерфейса
+                // Скрываем интерфейс
                 if (this.infoPanel) this.infoPanel.style.display = 'none';
                 const menu = document.querySelector('.fullscreen-menu');
                 if (menu) menu.style.display = 'none';
@@ -593,7 +594,6 @@ class ImageViewer {
                 const topBar = document.querySelector('.top-bar');
                 if (topBar) topBar.style.display = 'none';
                 
-                // Растягиваем canvas на весь экран
                 if (this.imageArea) {
                     this.imageArea.style.width = '100vw';
                     this.imageArea.style.height = '100vh';
@@ -607,13 +607,14 @@ class ImageViewer {
                     
                     // В полноэкранном режиме ВСЕГДА FIT
                     if (this.zoomCtrl) this.zoomCtrl.zoomToFit();
+                    console.log('Fullscreen: применён FIT');
                 }, 150);
                 
             } else {
-                // ========== ВЫХОД ИЗ ПОЛНОЭКРАННОГО РЕЖИМА ==========
+                // ========== ВЫХОД ==========
                 if (fullscreenBtn) fullscreenBtn.innerHTML = '<i class="fas fa-expand"></i>';
                 
-                // Показываем все элементы обратно
+                // Показываем интерфейс
                 if (this.infoPanel) this.infoPanel.style.display = '';
                 const menu = document.querySelector('.fullscreen-menu');
                 if (menu) menu.style.display = '';
@@ -622,7 +623,6 @@ class ImageViewer {
                 const topBar = document.querySelector('.top-bar');
                 if (topBar) topBar.style.display = '';
                 
-                // Возвращаем исходные стили canvas
                 if (this.imageArea) {
                     this.imageArea.style.width = '';
                     this.imageArea.style.height = '';
@@ -634,21 +634,32 @@ class ImageViewer {
                     const newHeight = this.imageArea.clientHeight;
                     this.fabricCanvas.setDimensions({ width: newWidth, height: newHeight });
                     
-                    // ВОССТАНАВЛИВАЕМ СОХРАНЁННЫЙ МАСШТАБ
+                    // ВОССТАНАВЛИВАЕМ СОХРАНЁННОЕ СОСТОЯНИЕ
                     if (this.currentImage && this._savedScaleBeforeFullscreen !== undefined) {
+                        // Восстанавливаем масштаб изображения
                         this.currentImage.scale(this._savedScaleBeforeFullscreen);
                         this.currentImage.set({
                             left: this._savedLeftBeforeFullscreen,
                             top: this._savedTopBeforeFullscreen
                         });
+                        
+                        // Восстанавливаем режим просмотрщика
                         this.viewMode = this._savedViewModeBeforeFullscreen;
                         this.updateViewModeButton();
+                        
+                        // Сбрасываем трансформации canvas
                         this.fabricCanvas.setViewportTransform([1, 0, 0, 1, 0, 0]);
                         this.fabricCanvas.setZoom(1);
                         this.fabricCanvas.renderAll();
-                        console.log('Восстановлено после fullscreen:', this._savedScaleBeforeFullscreen);
+                        
+                        console.log('Восстановлено:', {
+                            scale: this._savedScaleBeforeFullscreen,
+                            mode: this._savedViewModeBeforeFullscreen,
+                            left: this._savedLeftBeforeFullscreen,
+                            top: this._savedTopBeforeFullscreen
+                        });
                     } else {
-                        // Если не сохранили - применяем режим по умолчанию
+                        // Если не сохранили - применяем текущий режим
                         if (this.viewMode === 'fit') {
                             if (this.zoomCtrl) this.zoomCtrl.zoomToFit();
                         } else {
@@ -663,13 +674,21 @@ class ImageViewer {
 
     toggleFullscreen() {
         if (!document.fullscreenElement) {
-            // Сохраняем состояние ДО входа
+            // Сохраняем ВСЁ состояние ДО входа
             if (this.currentImage) {
                 this._savedScaleBeforeFullscreen = this.currentImage.scaleX;
                 this._savedLeftBeforeFullscreen = this.currentImage.left;
                 this._savedTopBeforeFullscreen = this.currentImage.top;
                 this._savedViewModeBeforeFullscreen = this.viewMode;
-                console.log('Сохранено перед fullscreen:', this._savedScaleBeforeFullscreen);
+                // Дополнительно сохраняем трансформации canvas
+                this._savedZoomBeforeFullscreen = this.fabricCanvas.getZoom();
+                this._savedViewport = this.fabricCanvas.viewportTransform;
+                console.log('Сохранено:', {
+                    scale: this._savedScaleBeforeFullscreen,
+                    mode: this._savedViewModeBeforeFullscreen,
+                    left: this._savedLeftBeforeFullscreen,
+                    top: this._savedTopBeforeFullscreen
+                });
             }
             
             const elem = document.documentElement;
@@ -690,8 +709,8 @@ class ImageViewer {
         if (newWidth > 0 && newHeight > 0) {
             this.fabricCanvas.setDimensions({ width: newWidth, height: newHeight });
             
-            // Только центрируем, не меняем масштаб
-            if (this.currentImage) {
+            // Только центрируем, если не в полноэкранном режиме
+            if (!document.fullscreenElement && this.currentImage) {
                 this.fabricCanvas.centerObject(this.currentImage);
                 this.fabricCanvas.renderAll();
             }
