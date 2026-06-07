@@ -702,22 +702,31 @@ class ImageViewer {
 
     handleResize() {
         if (!this.isVisible || !this.fabricCanvas) return;
-        
+
         const newWidth = this.imageArea.clientWidth;
         const newHeight = this.imageArea.clientHeight;
-        
+
         if (newWidth > 0 && newHeight > 0) {
+            const currentScale = this.currentImage ? this.currentImage.scaleX : 1;
             this.fabricCanvas.setDimensions({ width: newWidth, height: newHeight });
-            
-        // Применяем режим просмотра
-        if (document.fullscreenElement) {
-            // В полноэкранном режиме всегда FIT
-            if (this.zoomCtrl) this.zoomCtrl.zoomToFit();
-        } else if (this.viewMode === 'fit') {
-            if (this.zoomCtrl) this.zoomCtrl.zoomToFit();
-        } else {
-            if (this.zoomCtrl) this.zoomCtrl.zoomTo100();
-        }
+
+            // ВАЖНО! Здесь отключаем вмешательство при ресайзе, чтобы не сбивать fullscreen
+            if (!document.fullscreenElement) {
+                if (this.currentImage) {
+                    this.currentImage.scale(currentScale);
+                    this.fabricCanvas.centerObject(this.currentImage);
+                    this.fabricCanvas.renderAll();
+                }
+                if (this.viewMode === 'fit') {
+                    if (this.zoomCtrl) this.zoomCtrl.zoomToFit();
+                }
+            } else {
+                 // Если fullscreen активен, просто центрируем без изменения масштаба
+                if (this.currentImage) {
+                    this.fabricCanvas.centerObject(this.currentImage);
+                    this.fabricCanvas.renderAll();
+                }
+            }
         }
     }
 }
