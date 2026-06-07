@@ -18,7 +18,6 @@ class ZoomController {
         this.currentImage = image;
     }
 
-    // Отключение сглаживания (без изменения позиции)
     disableSmoothing() {
         if (this.fabricCanvas && this.fabricCanvas.contextContainer) {
             this.fabricCanvas.contextContainer.imageSmoothingEnabled = false;
@@ -82,14 +81,9 @@ class ZoomController {
     zoomTo100() {
         if (!this.fabricCanvas || !this.currentImage) return;
         
-        // Сбрасываем масштаб изображения до 1
         this.currentImage.scale(1);
-        
-        // Сбрасываем трансформации canvas
         this.fabricCanvas.setViewportTransform([1, 0, 0, 1, 0, 0]);
         this.fabricCanvas.setZoom(1);
-        
-        // Центрируем изображение
         this.fabricCanvas.centerObject(this.currentImage);
         this.disableSmoothing();
         this.fabricCanvas.renderAll();
@@ -100,18 +94,13 @@ class ZoomController {
         
         let imgWidth, imgHeight;
         
-        try {
-            if (this.currentImage.getBoundingRect) {
-                const bounds = this.currentImage.getBoundingRect();
-                imgWidth = bounds.width;
-                imgHeight = bounds.height;
-            } else {
-                imgWidth = this.currentImage.width;
-                imgHeight = this.currentImage.height;
-            }
-        } catch(e) {
-            console.error('Ошибка получения размеров:', e);
-            return;
+        if (this.currentImage.getBoundingRect) {
+            const bounds = this.currentImage.getBoundingRect();
+            imgWidth = bounds.width;
+            imgHeight = bounds.height;
+        } else {
+            imgWidth = this.currentImage.width;
+            imgHeight = this.currentImage.height;
         }
         
         if (!imgWidth || !imgHeight) return;
@@ -129,44 +118,11 @@ class ZoomController {
         this.fabricCanvas.centerObject(this.currentImage);
         this.disableSmoothing();
         this.fabricCanvas.renderAll();
-        
-        console.log(`zoomToFit: scale=${scale}`);
     }
 
     zoomToPoint(point, zoom) {
         if (!this.fabricCanvas) return;
         this.fabricCanvas.zoomToPoint(point, zoom);
-        this.disableSmoothing();
-        this.fabricCanvas.renderAll();
-    }
-	
-    forceFit() {
-        if (!this.fabricCanvas || !this.currentImage) return;
-        
-        // Получаем актуальные размеры canvas
-        const canvasWidth = this.fabricCanvas.width;
-        const canvasHeight = this.fabricCanvas.height;
-        
-        let imgWidth, imgHeight;
-        if (this.currentImage.getBoundingRect) {
-            const bounds = this.currentImage.getBoundingRect();
-            imgWidth = bounds.width;
-            imgHeight = bounds.height;
-        } else {
-            imgWidth = this.currentImage.width;
-            imgHeight = this.currentImage.height;
-        }
-        
-        if (imgWidth === 0 || imgHeight === 0) return;
-        
-        const scale = Math.min(canvasWidth / imgWidth, canvasHeight / imgHeight);
-        
-        console.log(`forceFit: canvas=${canvasWidth}x${canvasHeight}, image=${imgWidth}x${imgHeight}, scale=${scale}`);
-        
-        this.currentImage.scale(scale);
-        this.fabricCanvas.setViewportTransform([1, 0, 0, 1, 0, 0]);
-        this.fabricCanvas.setZoom(1);
-        this.fabricCanvas.centerObject(this.currentImage);
         this.disableSmoothing();
         this.fabricCanvas.renderAll();
     }

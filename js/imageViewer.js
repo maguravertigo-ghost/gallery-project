@@ -332,21 +332,22 @@ class ImageViewer {
         
         this.clearCanvas();
         
-        // Скрываем canvas до полной загрузки
         const canvasEl = document.getElementById(this.canvasId);
         if (canvasEl) canvasEl.style.opacity = '0';
         
         await this.loadImage(imageData);
         await this.ui.updateFileInfo(imageData.fileObj);
         
-        // Применяем режим просмотра
-        if (this.viewMode === 'fit') {
+        // Применяем режим с учётом полноэкранного режима
+        if (document.fullscreenElement) {
+            // В полноэкранном режиме всегда FIT
+            if (this.zoomCtrl) this.zoomCtrl.zoomToFit();
+        } else if (this.viewMode === 'fit') {
             if (this.zoomCtrl) this.zoomCtrl.zoomToFit();
         } else {
             if (this.zoomCtrl) this.zoomCtrl.zoomTo100();
         }
         
-        // Показываем canvas
         if (canvasEl) {
             canvasEl.style.transition = 'opacity 0.2s ease';
             canvasEl.style.opacity = '1';
@@ -583,15 +584,6 @@ class ImageViewer {
                 // ========== ВХОД В ПОЛНОЭКРАННЫЙ РЕЖИМ ==========
                 if (fullscreenBtn) fullscreenBtn.innerHTML = '<i class="fas fa-compress"></i>';
                 
-                // Сохраняем ТЕКУЩИЙ масштаб и позицию
-                if (this.currentImage) {
-                    this._savedScaleBeforeFullscreen = this.currentImage.scaleX;
-                    this._savedLeftBeforeFullscreen = this.currentImage.left;
-                    this._savedTopBeforeFullscreen = this.currentImage.top;
-                    this._viewModeBeforeFullscreen = this.viewMode;
-                    console.log('Сохранён масштаб:', this._savedScaleBeforeFullscreen);
-                }
-                
                 // Скрываем все элементы интерфейса
                 if (this.infoPanel) this.infoPanel.style.display = 'none';
                 const menu = document.querySelector('.fullscreen-menu');
@@ -608,35 +600,15 @@ class ImageViewer {
                     this.imageArea.style.borderRadius = '0';
                 }
                 
-                // Даём время на перестройку
                 setTimeout(() => {
-                    // Обновляем размеры canvas
                     const newWidth = this.imageArea.clientWidth;
                     const newHeight = this.imageArea.clientHeight;
                     this.fabricCanvas.setDimensions({ width: newWidth, height: newHeight });
                     
-                    // Принудительный FIT на весь экран
-                    if (this.currentImage) {
-                        let imgWidth, imgHeight;
-                        if (this.currentImage.getBoundingRect) {
-                            const bounds = this.currentImage.getBoundingRect();
-                            imgWidth = bounds.width;
-                            imgHeight = bounds.height;
-                        } else {
-                            imgWidth = this.currentImage.width;
-                            imgHeight = this.currentImage.height;
-                        }
-                        
-                        const scale = Math.min(newWidth / imgWidth, newHeight / imgHeight);
-                        this.currentImage.scale(scale);
-                        this.fabricCanvas.setViewportTransform([1, 0, 0, 1, 0, 0]);
-                        this.fabricCanvas.setZoom(1);
-                        this.fabricCanvas.centerObject(this.currentImage);
-                        this.fabricCanvas.renderAll();
-                        
-                        console.log(`Fullscreen FIT: canvas=${newWidth}x${newHeight}, scale=${scale}`);
-                    }
-                }, 200);
+                    // В полноэкранном режиме ВСЕГДА FIT
+                    if (this.zoomCtrl) this.zoomCtrl.zoomToFit();
+                }, 150);
+                
             } else {
                 // ========== ВЫХОД ИЗ ПОЛНОЭКРАННОГО РЕЖИМА ==========
                 if (fullscreenBtn) fullscreenBtn.innerHTML = '<i class="fas fa-expand"></i>';
@@ -658,12 +630,11 @@ class ImageViewer {
                 }
                 
                 setTimeout(() => {
-                    // Обновляем размеры canvas
                     const newWidth = this.imageArea.clientWidth;
                     const newHeight = this.imageArea.clientHeight;
                     this.fabricCanvas.setDimensions({ width: newWidth, height: newHeight });
                     
-                    // ВОССТАНАВЛИВАЕМ СОХРАНЁННЫЙ МАСШТАБ (НЕ FIT!)
+                    // ВОССТАНАВЛИВАЕМ СОХРАНЁННЫЙ МАСШТАБ
                     if (this.currentImage && this._savedScaleBeforeFullscreen !== undefined) {
                         this.currentImage.scale(this._savedScaleBeforeFullscreen);
                         this.currentImage.set({
@@ -675,24 +646,32 @@ class ImageViewer {
                         this.fabricCanvas.setViewportTransform([1, 0, 0, 1, 0, 0]);
                         this.fabricCanvas.setZoom(1);
                         this.fabricCanvas.renderAll();
-                        console.log('Восстановлен масштаб:', this._savedScaleBeforeFullscreen);
+                        console.log('Восстановлено после fullscreen:', this._savedScaleBeforeFullscreen);
                     } else {
                         // Если не сохранили - применяем режим по умолчанию
-                        const savedMode = this._savedViewModeBeforeFullscreen || '100';
-                        if (savedMode === 'fit') {
+                        if (this.viewMode === 'fit') {
                             if (this.zoomCtrl) this.zoomCtrl.zoomToFit();
                         } else {
                             if (this.zoomCtrl) this.zoomCtrl.zoomTo100();
                         }
                     }
                     this.forceRender();
-                }, 200);
+                }, 150);
             }
         });
     }
 
     toggleFullscreen() {
         if (!document.fullscreenElement) {
+            // Сохраняем состояние ДО входа
+            if (this.currentImage) {
+                this._savedScaleBeforeFullscreen = this.currentImage.scaleX;
+                this._savedLeftBeforeFullscreen = this.currentImage.left;
+                this._savedTopBeforeFullscreen = this.currentImage.top;
+                this._savedViewModeBeforeFullscreen = this.viewMode;
+                console.log('Сохранено перед fullscreen:', this._savedScaleBeforeFullscreen);
+            }
+            
             const elem = document.documentElement;
             if (elem.requestFullscreen) {
                 elem.requestFullscreen().catch(err => console.log('Fullscreen error:', err));
